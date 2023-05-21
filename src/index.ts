@@ -9,7 +9,8 @@ dotenv.config()
     let lastGenerated = new Date();
     let aemetService = new AemetService();
 
-    var myJob = new cronJob('*/10 * * * *', async function(){
+    let configCron = process.env.configCron;
+    var myJob = new cronJob(configCron, async function(){
       let hourlyForecast = await aemetService.getDataHourlyForecast();
       if(lastGenerated != hourlyForecast[0].elaborado){
         lastGenerated = hourlyForecast[0].elaborado;
@@ -21,6 +22,8 @@ dotenv.config()
             sendMessage(text);
           }
         }
+      }else{
+        console.log(`Aemet no ha actualizado desde la ultima comprobacion (${lastGenerated})`);
       }
     });
 
