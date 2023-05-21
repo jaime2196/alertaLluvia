@@ -64,8 +64,8 @@ export interface VientoAndRachaMax {
     value?:     string;
 }
 
-export enum Tiempo{
-    Tormenta = 0,
-    Precipitacion = 1,
-    Nieve = 2,
+export enum Weather{
+    Storm = 0,
+    Rain = 1,
+    Snow = 2,
 }

@@ -1,5 +1,5 @@
 import { AemetModel } from "../models/aemetModel";
-import { Dia, PeriodoValor, PrediccionHoraria, Tiempo } from "../models/prediccionHorariaModel";
+import { Dia, PeriodoValor, PrediccionHoraria, Weather } from "../models/prediccionHorariaModel";
 
 const https = require('https');
 
@@ -15,7 +15,7 @@ export class AemetService{
 
     
 
-    private getPredicionHoraria(): Promise<AemetModel>{
+    private getHourlyForecast(): Promise<AemetModel>{
         const options = {
             hostname: 'opendata.aemet.es',
             path: `/opendata/api/prediccion/especifica/municipio/horaria/${this.location}`,
@@ -34,13 +34,13 @@ export class AemetService{
                     resolve(JSON.parse(data));
                 });
             }).on('error', (err: any)=>{
-                console.log('Se ha producido un error: '+err);
+                console.log('There is an error: '+err);
             });
         });
     }
 
-    async getDatosPredicionHoraria(): Promise<PrediccionHoraria[]> {
-        let aemetModel =  await this.getPredicionHoraria();
+    async getDataHourlyForecast(): Promise<PrediccionHoraria[]> {
+        let aemetModel =  await this.getHourlyForecast();
         let url = new URL(aemetModel.datos);
         const options = {
             hostname: url.hostname,
@@ -61,148 +61,144 @@ export class AemetService{
         });
     }
 
-     getPrediccionHoy(predicciones: PrediccionHoraria[]): Dia | undefined{
-        let hoy = this.getDiaActual();
-        for(let i=0;i!=predicciones.length;i++){
-            let prediccion = predicciones[i].prediccion;
-            for(let j=0;j!=prediccion.dia.length;j++){
-                let fechaPrediccion =this.eliminarHorasFecha(prediccion.dia[j].fecha.toString());
-                if(hoy==fechaPrediccion){
-                    return prediccion.dia[j];
+     getForecastToday(forecasts: PrediccionHoraria[]): Dia | undefined{
+        let today = this.getToday();
+        for(let i=0;i!=forecasts.length;i++){
+            let forecast = forecasts[i].prediccion;
+            for(let j=0;j!=forecast.dia.length;j++){
+                let forecasDate =this.removeHours(forecast.dia[j].fecha.toString());
+                if(today==forecasDate){
+                    return forecast.dia[j];
                 }
             }
         }
         return undefined;
     }
 
-    private getDiaActual(): string{
-        const hoy = new Date();
-        let mes =hoy.getMonth()+1;
-        let mesStr='';
-        if(mes <=9){
-            mesStr=`0${mes}`
+    private getToday(): string{
+        const today = new Date();
+        let month =today.getMonth()+1;
+        let monthStr='';
+        if(month <=9){
+            monthStr=`0${month}`
         }else{
-            mesStr=`${mes}`;
+            monthStr=`${month}`;
         }
-        let dia = hoy.getDate();
-        let diaStr='';
-        if(dia <=9){
-            diaStr=`0${dia}`;
+        let day = today.getDate();
+        let dayStr='';
+        if(day <=9){
+            dayStr=`0${day}`;
         }else{
-            diaStr=`${dia}`
+            dayStr=`${day}`
         }
-        return `${hoy.getFullYear()}-${mesStr}-${diaStr}`;
+        return `${today.getFullYear()}-${monthStr}-${dayStr}`;
     }
 
-    private eliminarHorasFecha(fecha: string):string{
-        let ar=fecha.split('T');
+    private removeHours(date: string):string{
+        let ar=date.split('T');
         return ar[0];
     }
 
-    evaluarPredicciones(prediccion: Dia): string{
-        let resPrep = this.evaluarPeriodoValor(prediccion.probPrecipitacion, Tiempo.Precipitacion);
-        //console.log(resPrep);
-        let resTormenta = this.evaluarPeriodoValor(prediccion.probTormenta, Tiempo.Tormenta);
-        //console.log(resTormenta);
-        let resNieve = this.evaluarPeriodoValor(prediccion.probNieve, Tiempo.Nieve);
-        //console.log(resNieve);
-        let hashMap = this.agruparPredicciones(resPrep, resTormenta, resNieve);
-        let texto = this.generarTexto(hashMap);
-        return texto;
+    evaluateForecasts(forecast: Dia): string{
+        let resRain = this.evaluatePeriodValue(forecast.probPrecipitacion, Weather.Rain);
+        let resStorm = this.evaluatePeriodValue(forecast.probTormenta, Weather.Storm);
+        let resSnow = this.evaluatePeriodValue(forecast.probNieve, Weather.Snow);
+        let hashMap = this.groupForecasts(resRain, resStorm, resSnow);
+        let text = this.generateText(hashMap);
+        return text;
     }
 
-    private agruparPredicciones(periodoPrep: PeriodoValor[], periodoTorm: PeriodoValor[], periodoNiev: PeriodoValor[]): Map<string, string>{
+    private groupForecasts(periodRain: PeriodoValor[], periodStorm: PeriodoValor[], periodSnow: PeriodoValor[]): Map<string, string>{
         let hashMap = new Map<string, string>();
-        for(let i=0;i!=periodoPrep.length;i++){
-            hashMap.set(this.periodoToStr(periodoPrep[i]),'P');
+        for(let i=0;i!=periodRain.length;i++){
+            hashMap.set(this.periodToStr(periodRain[i]),'P');
         }
-        for(let i=0;i!=periodoTorm.length;i++){
-            if(hashMap.has(this.periodoToStr(periodoTorm[i]))){
-                let val = hashMap.get(this.periodoToStr(periodoTorm[i]));
-                hashMap.set(this.periodoToStr(periodoTorm[i]), val+'T')
+        for(let i=0;i!=periodStorm.length;i++){
+            if(hashMap.has(this.periodToStr(periodStorm[i]))){
+                let val = hashMap.get(this.periodToStr(periodStorm[i]));
+                hashMap.set(this.periodToStr(periodStorm[i]), val+'T')
             }else{
-                hashMap.set(this.periodoToStr(periodoTorm[i]),'T')
+                hashMap.set(this.periodToStr(periodStorm[i]),'T')
             }
         }
-        for(let i=0;i!=periodoNiev.length;i++){
-            if(hashMap.has(this.periodoToStr(periodoNiev[i]))){
-                let val = hashMap.get(this.periodoToStr(periodoNiev[i]));
-                hashMap.set(this.periodoToStr(periodoNiev[i]), val+'T')
+        for(let i=0;i!=periodSnow.length;i++){
+            if(hashMap.has(this.periodToStr(periodSnow[i]))){
+                let val = hashMap.get(this.periodToStr(periodSnow[i]));
+                hashMap.set(this.periodToStr(periodSnow[i]), val+'T')
             }else{
-                hashMap.set(this.periodoToStr(periodoNiev[i]),'T')
+                hashMap.set(this.periodToStr(periodSnow[i]),'T')
             }
         }
-        //console.log(hashMap);
         return hashMap;
     }
 
-    private generarTexto(hashMap: Map<string, string>): string{
+    private generateText(hashMap: Map<string, string>): string{
         let msg = '';
-        hashMap.forEach((tipo, prediccion) =>{
-            let datos = prediccion.split('-');
-            let periodo = this.separarPeriodo(datos[1]);
-            msg = msg + `Hay un ${datos[0]} % de probabilidad de ${this.getTextoEstado(tipo)} entre las ${periodo[0]} y ${periodo[1]}\n`;
+        hashMap.forEach((type, forecast) =>{
+            let data = forecast.split('-');
+            let period = this.splitPeriod(data[1]);
+            msg = msg + `Hay un ${data[0]} % de probabilidad de ${this.getTextState(type)} entre las ${period[0]} y ${period[1]}\n\n`;
         });
         return msg;
     }
     
-    private separarPeriodo(periodo: string): string[]{
+    private splitPeriod(period: string): string[]{
         let res: string[] =[];
-        res.push(periodo.substring(0,2));
-        res.push(periodo.substring(2,4));
+        res.push(period.substring(0,2));
+        res.push(period.substring(2,4));
         return res;
     }
 
-    private periodoToStr(periodo: PeriodoValor){
-        return `${periodo.value}-${periodo.periodo}`;
+    private periodToStr(period: PeriodoValor){
+        return `${period.value}-${period.periodo}`;
     }
     
-    private getTextoEstado(estado :string):string{
+    private getTextState(state :string):string{
         let res = '';
-        if(estado.length == 1){
-            res = this.getEstado(estado);
+        if(state.length == 1){
+            res = this.getState(state);
         }
-        if(estado.length == 2){
-            res = `${this.getEstado(estado[0])} y ${this.getEstado(estado[1])}`
+        if(state.length == 2){
+            res = `${this.getState(state[0])} y ${this.getState(state[1])}`
         }
-        if(estado.length == 3){
-            res = `${this.getEstado(estado[0])}, ${this.getEstado(estado[1])} y ${this.getEstado(estado[2])}`;
+        if(state.length == 3){
+            res = `${this.getState(state[0])}, ${this.getState(state[1])} y ${this.getState(state[2])}`;
         }
         return res;
     }
 
-    private getEstado(estado :string):string{
+    private getState(state :string):string{
         let res ='';
-        if(estado=='P'){
-            res = 'lluvia';
+        if(state=='P'){
+            res = 'lluvia 🌧';
         }
-        if(estado == 'T'){
-            res = 'tormenta'
+        if(state == 'T'){
+            res = 'tormenta ⛈'
         }
-        if(estado == 'N'){
-            res = 'nieve';
+        if(state == 'N'){
+            res = 'nieve ❄';
         }
         return res;
     }
 
-    private evaluarPeriodoValor(periodoValor: PeriodoValor[], tiempo: Tiempo): PeriodoValor[]{
-        let hora = this.getHoraActual();
+    private evaluatePeriodValue(periodValue: PeriodoValor[], weather: Weather): PeriodoValor[]{
+        let currentHour = this.getCurrentHour();
         let result: PeriodoValor[]=[];
-        for(let i=0;i!=periodoValor.length;i++){
-            if(this.isPeriodoValido(hora, periodoValor[i].periodo)){
-                if(tiempo == Tiempo.Precipitacion){
-                    if(this.compararValorUmbral(periodoValor[i].value, this.avisoPrecipitacion)){
-                        result.push(periodoValor[i]);
+        for(let i=0;i!=periodValue.length;i++){
+            if(this.isPeriodValid(currentHour, periodValue[i].periodo)){
+                if(weather == Weather.Rain){
+                    if(this.compareThresholdValue(periodValue[i].value, this.avisoPrecipitacion)){
+                        result.push(periodValue[i]);
                     }
                 }
-                if(tiempo == Tiempo.Tormenta){
-                    if(this.compararValorUmbral(periodoValor[i].value, this.avisoTormenta)){
-                        result.push(periodoValor[i]);
+                if(weather == Weather.Storm){
+                    if(this.compareThresholdValue(periodValue[i].value, this.avisoTormenta)){
+                        result.push(periodValue[i]);
                     }
                 }
-                if(tiempo == Tiempo.Nieve){
-                    if(this.compararValorUmbral(periodoValor[i].value, this.avisoNieve)){
-                        result.push(periodoValor[i]);
+                if(weather == Weather.Snow){
+                    if(this.compareThresholdValue(periodValue[i].value, this.avisoNieve)){
+                        result.push(periodValue[i]);
                     }
                 }
             }
@@ -210,31 +206,31 @@ export class AemetService{
         return result;
     }
 
-    private getHoraActual(): number{
-        let hoy = new Date();
-        return hoy.getHours();
+    private getCurrentHour(): number{
+        let today = new Date();
+        return today.getHours();
     }
 
-    private compararValorUmbral(value: string, umbral: string | undefined): boolean{
-        let valor = Number.parseInt(value);
+    private compareThresholdValue(value: string, threshold: string | undefined): boolean{
+        let valueNum = Number.parseInt(value);
         let unbralNum = 5;
-        if(umbral!=undefined){
-            unbralNum = Number.parseInt(umbral);
+        if(threshold!=undefined){
+            unbralNum = Number.parseInt(threshold);
         }
 
-        if(valor>=unbralNum){
+        if(valueNum>=unbralNum){
             return true;
         }
         return false;
     }
 
-    private isPeriodoValido(hora: number, periodo: string): boolean{
-        let inicioPeriodo = Number.parseInt(periodo.substring(0,2));
-        let finPeriodo = Number.parseInt(periodo.substring(2,4));
-        if(hora>=inicioPeriodo && hora<finPeriodo){
+    private isPeriodValid(hour: number, period: string): boolean{
+        let initPeriod = Number.parseInt(period.substring(0,2));
+        let endPeriod = Number.parseInt(period.substring(2,4));
+        if(hour>=initPeriod && hour<endPeriod){
             return true;
         }
-        if(hora<=inicioPeriodo){
+        if(hour<=initPeriod){
             return true;
         }
         return false;
