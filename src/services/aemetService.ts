@@ -134,9 +134,7 @@ export class AemetService{
 
     private generateText(hashMap: Map<string, string>): string{
         let msg = '';
-        console.log(hashMap);
         hashMap.forEach((hState, hPeriod) =>{
-            console.log(hState);
             let period = this.splitPeriod(hPeriod);
             msg = msg + `❗ De ${period[0]}:00 a ${period[1]}:00, hay un ${this.generateState(hState)}\n\n`;
         });
@@ -156,13 +154,8 @@ export class AemetService{
     }
 
     private getConjuncion(total:number, pos:number):string{
-        console.log(total, pos);
-        if(total == 1){
-            return '';
-        }
         if(total == 2 && pos == 0){
-            console.log('Pasa')
-            return ' y un'
+            return ' y un';
         }
         if(total == 3 && pos==0){
             return ',';
