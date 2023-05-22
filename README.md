@@ -1,12 +1,12 @@
 # AlertaLluvia
 AlertaLluvia es un script escrito es [Typescript](https://www.typescriptlang.org/) que se ejecuta en [Node](https://nodejs.org/es).
 
-Alerta lluvia usa [Open API](https://opendata.aemet.es/centrodedescargas/inicio) de la Aemet para obtener la predicción del tiempo y envía un mensaje de Telgram
+Alerta lluvia usa [Open data](https://opendata.aemet.es/centrodedescargas/inicio) de la Aemet para obtener la predicción del tiempo y envía un mensaje de Telgram
 cada vez que la Aemet actualice sus datos.
+
 Necesitas tener un bot de Telegram y conocer tu ID de usuario para que te lleguen los avisos. 
 Puedes generar tu bot siguiendo este [tutorial](https://www.toptal.com/python/telegram-bot-tutorial-python).
-
-Para conocer tu id de usuario puedes usar el bot "@userinfobot"
+Para conocer tu ID de usuario puedes usar el bot "@userinfobot"
 
 
 ## Instalación y ejecución

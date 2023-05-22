@@ -1,7 +1,8 @@
 node_modules/
 dist/
+.env
 .gitignore
-DockerFile
+Dockerfile
 nodemon.json
 package-lock.json
 README.md

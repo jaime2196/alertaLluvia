@@ -23,7 +23,7 @@ dotenv.config()
           }
         }
       }else{
-        console.log(`Aemet no ha actualizado desde la ultima comprobacion (${lastGenerated})`);
+        console.log(`Aemet no ha actualizado desde la última comprobación (${lastGenerated})`);
       }
     });
 

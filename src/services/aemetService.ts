@@ -111,22 +111,22 @@ export class AemetService{
     private groupForecasts(periodRain: PeriodoValor[], periodStorm: PeriodoValor[], periodSnow: PeriodoValor[]): Map<string, string>{
         let hashMap = new Map<string, string>();
         for(let i=0;i!=periodRain.length;i++){
-            hashMap.set(this.periodToStr(periodRain[i]),'P');
+            hashMap.set(periodRain[i].periodo,`P${periodRain[i].value}`);
         }
         for(let i=0;i!=periodStorm.length;i++){
-            if(hashMap.has(this.periodToStr(periodStorm[i]))){
-                let val = hashMap.get(this.periodToStr(periodStorm[i]));
-                hashMap.set(this.periodToStr(periodStorm[i]), val+'T')
+            if(hashMap.has(periodStorm[i].periodo)){
+                let val = hashMap.get(periodStorm[i].periodo);
+                hashMap.set(periodStorm[i].periodo, val+`,T${periodStorm[i].value}`);
             }else{
-                hashMap.set(this.periodToStr(periodStorm[i]),'T')
+                hashMap.set(periodStorm[i].periodo,`T${periodStorm[i].value}`);
             }
         }
         for(let i=0;i!=periodSnow.length;i++){
-            if(hashMap.has(this.periodToStr(periodSnow[i]))){
-                let val = hashMap.get(this.periodToStr(periodSnow[i]));
-                hashMap.set(this.periodToStr(periodSnow[i]), val+'T')
+            if(hashMap.has(periodSnow[i].periodo)){
+                let val = hashMap.get(periodSnow[i].periodo);
+                hashMap.set(periodSnow[i].periodo, val+`,N${periodSnow[i].value}`);
             }else{
-                hashMap.set(this.periodToStr(periodSnow[i]),'T')
+                hashMap.set(periodSnow[i].periodo,`,N${periodSnow[i].value}`);
             }
         }
         return hashMap;
@@ -134,12 +134,43 @@ export class AemetService{
 
     private generateText(hashMap: Map<string, string>): string{
         let msg = '';
-        hashMap.forEach((type, forecast) =>{
-            let data = forecast.split('-');
-            let period = this.splitPeriod(data[1]);
-            msg = msg + `Hay un ${data[0]} % de probabilidad de ${this.getTextState(type)} entre las ${period[0]} y ${period[1]}\n\n`;
+        console.log(hashMap);
+        hashMap.forEach((hState, hPeriod) =>{
+            console.log(hState);
+            let period = this.splitPeriod(hPeriod);
+            msg = msg + `❗ De ${period[0]}:00 a ${period[1]}:00, hay un ${this.generateState(hState)}\n\n`;
         });
         return msg;
+    }
+
+    private generateState(state:string){
+        let arState = state.split(',');
+        let result = '';
+        for(let i=0;i!=arState.length;i++){
+            let s =arState[i];
+            let percentage = s.substring(1,s.length);
+            let weather = s.substring(0,1);
+            result = result + `${percentage}% de probabilidad de ${this.getState(weather)}${this.getConjuncion(arState.length,i)} `;
+        }
+        return result;
+    }
+
+    private getConjuncion(total:number, pos:number):string{
+        console.log(total, pos);
+        if(total == 1){
+            return '';
+        }
+        if(total == 2 && pos == 0){
+            console.log('Pasa')
+            return ' y un'
+        }
+        if(total == 3 && pos==0){
+            return ',';
+        }
+        if(total == 3 && pos==1){
+            return ' y un';
+        }
+        return '';
     }
     
     private splitPeriod(period: string): string[]{
@@ -149,23 +180,6 @@ export class AemetService{
         return res;
     }
 
-    private periodToStr(period: PeriodoValor){
-        return `${period.value}-${period.periodo}`;
-    }
-    
-    private getTextState(state :string):string{
-        let res = '';
-        if(state.length == 1){
-            res = this.getState(state);
-        }
-        if(state.length == 2){
-            res = `${this.getState(state[0])} y ${this.getState(state[1])}`
-        }
-        if(state.length == 3){
-            res = `${this.getState(state[0])}, ${this.getState(state[1])} y ${this.getState(state[2])}`;
-        }
-        return res;
-    }
 
     private getState(state :string):string{
         let res ='';
@@ -213,12 +227,12 @@ export class AemetService{
 
     private compareThresholdValue(value: string, threshold: string | undefined): boolean{
         let valueNum = Number.parseInt(value);
-        let unbralNum = 5;
+        let thresholdNum = 5;
         if(threshold!=undefined){
-            unbralNum = Number.parseInt(threshold);
+            thresholdNum = Number.parseInt(threshold);
         }
 
-        if(valueNum>=unbralNum){
+        if(valueNum>=thresholdNum){
             return true;
         }
         return false;
