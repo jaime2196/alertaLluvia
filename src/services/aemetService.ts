@@ -1,5 +1,6 @@
 import { AemetModel } from "../models/aemetModel";
 import { Dia, PeriodoValor, PrediccionHoraria, Weather } from "../models/prediccionHorariaModel";
+import { UtilService } from "./utilService";
 
 const https = require('https');
 
@@ -34,7 +35,7 @@ export class AemetService{
                     resolve(JSON.parse(data));
                 });
             }).on('error', (err: any)=>{
-                console.log('There is an error: '+err);
+                UtilService.log('There is an error: '+err);
             });
         });
     }
@@ -56,47 +57,23 @@ export class AemetService{
                     resolve(JSON.parse(data));
                 });
             }).on('error', (err: any)=>{
-                console.log('Se ha producido un error: '+err);
+                UtilService.log('There is an error: '+err);
             });
         });
     }
 
      getForecastToday(forecasts: PrediccionHoraria[]): Dia | undefined{
-        let today = this.getToday();
+        let today = UtilService.getToday();
         for(let i=0;i!=forecasts.length;i++){
             let forecast = forecasts[i].prediccion;
             for(let j=0;j!=forecast.dia.length;j++){
-                let forecasDate =this.removeHours(forecast.dia[j].fecha.toString());
+                let forecasDate = UtilService.removeHours(forecast.dia[j].fecha.toString());
                 if(today==forecasDate){
                     return forecast.dia[j];
                 }
             }
         }
         return undefined;
-    }
-
-    private getToday(): string{
-        const today = new Date();
-        let month =today.getMonth()+1;
-        let monthStr='';
-        if(month <=9){
-            monthStr=`0${month}`
-        }else{
-            monthStr=`${month}`;
-        }
-        let day = today.getDate();
-        let dayStr='';
-        if(day <=9){
-            dayStr=`0${day}`;
-        }else{
-            dayStr=`${day}`
-        }
-        return `${today.getFullYear()}-${monthStr}-${dayStr}`;
-    }
-
-    private removeHours(date: string):string{
-        let ar=date.split('T');
-        return ar[0];
     }
 
     evaluateForecasts(forecast: Dia): string{
@@ -189,10 +166,9 @@ export class AemetService{
     }
 
     private evaluatePeriodValue(periodValue: PeriodoValor[], weather: Weather): PeriodoValor[]{
-        let currentHour = this.getCurrentHour();
         let result: PeriodoValor[]=[];
         for(let i=0;i!=periodValue.length;i++){
-            if(this.isPeriodValid(currentHour, periodValue[i].periodo)){
+            if(this.isPeriodValid(periodValue[i].periodo)){
                 if(weather == Weather.Rain){
                     if(this.compareThresholdValue(periodValue[i].value, this.avisoPrecipitacion)){
                         result.push(periodValue[i]);
@@ -213,10 +189,6 @@ export class AemetService{
         return result;
     }
 
-    private getCurrentHour(): number{
-        let today = new Date();
-        return today.getHours();
-    }
 
     private compareThresholdValue(value: string, threshold: string | undefined): boolean{
         let valueNum = Number.parseInt(value);
@@ -231,13 +203,17 @@ export class AemetService{
         return false;
     }
 
-    private isPeriodValid(hour: number, period: string): boolean{
+    private isPeriodValid(period: string): boolean{
+        let currentHour = UtilService.getCurrentHour();
         let initPeriod = Number.parseInt(period.substring(0,2));
         let endPeriod = Number.parseInt(period.substring(2,4));
-        if(hour>=initPeriod && hour<endPeriod){
+        if(initPeriod<=currentHour && endPeriod>currentHour){
             return true;
         }
-        if(hour<=initPeriod){
+        if(initPeriod>currentHour){
+            return true;
+        }
+        if(endPeriod==2){
             return true;
         }
         return false;

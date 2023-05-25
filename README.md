@@ -13,7 +13,7 @@ Para conocer tu ID de usuario puedes usar el bot "@userinfobot"
 Primero hay que configurar una serie de variables en un fichero ".env" en la raíz del proyecto:
 ```bash
 #Api Aemet
-location=28079 #Madrid centro, por ejemplo
+location=28013 #Madrid, por ejemplo
 apiKey=???
 #Umbral de avisos (%)
 avisoTormenta=5
